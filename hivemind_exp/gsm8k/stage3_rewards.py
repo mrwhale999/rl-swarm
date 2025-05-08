@@ -266,7 +266,7 @@ def concensus_correctness_reward_func(
             # Only perform this check when the answer is valid
             if correct_answer is not None:
                 check_submissions = [
-                    True Gambhirif r == a else False for r, a in zip(agent_as, answer)
+                    True if r == a else False for r, a in zip(agent_as, answer)
                 ]
                 if all(check_submissions):
                     cur_reward += 80
