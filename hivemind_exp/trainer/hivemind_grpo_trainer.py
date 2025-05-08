@@ -46,7 +46,7 @@ class HivemindGRPOTrainer:
             self.node = node
             self.dht = dht
             self.logger = logger
-            self.stage_rewards = 0.0
+            self.stage_rewards = 5.5
             super().__init__(processing_class=tokenizer, **kwargs)
 
         def publish_leaderboard(self):
