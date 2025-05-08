@@ -8,7 +8,6 @@ import numpy as np
 import hivemind_exp.gsm8k.stage1_rewards as stage1_rewards
 from hivemind_exp.hivemind_utils import HivemindNode
 
-
 def extract_xml_identity(text: str) -> str:
     if text is None:
         return ""
@@ -17,7 +16,6 @@ def extract_xml_identity(text: str) -> str:
     id = text.split("<majority>")[-1]
     id = id.split("</majority>")[0]
     return id.strip()
-
 
 def extract_xml_final_answer(text: str) -> str:
     if text is None:
@@ -28,7 +26,6 @@ def extract_xml_final_answer(text: str) -> str:
     answer = answer.split("</answer>")[0]
     return answer.strip()
 
-
 def extract_xml_question(text: str) -> str:
     if text is None:
         return ""
@@ -37,7 +34,6 @@ def extract_xml_question(text: str) -> str:
     question = text.split("<question>")[-1]
     question = question.split("</question>")[0]
     return question.strip()
-
 
 def extract_xml_ids(text: str) -> list:
     if text is None:
@@ -50,8 +46,8 @@ def extract_xml_ids(text: str) -> list:
         ids += [id.split("</student>")[0].strip()]
     return ids
 
-
 # TODO: Rethink how we add this reward in general setting with delayed rewards. Agents might learn to reward hack by "spamming" identify tags of their choice...
+
 def extract_xml_choices(text: str) -> list:
     if text is None:
         return []
@@ -63,17 +59,14 @@ def extract_xml_choices(text: str) -> list:
         ids += [id.split("</identify>")[0].strip()]
     return ids
 
-
 def extract_original_question(text: str) -> str:
     if text is None:
         return ""
     if not isinstance(text, str):
         return ""
-
     q = text.split("  \n\nThe following answers to this question were suggested:")[0]
     q = q.split("The question we were given is: ")[-1]
     return q.strip()
-
 
 def extract_answers(text: str) -> dict:
     if text is None:
@@ -85,7 +78,6 @@ def extract_answers(text: str) -> dict:
         raw = text.split(
             "  \nAfter comparing these answers, the following feedback was given about which answer is best: \n"
         )[0].split("<student>")[1:]
-
         for a in raw:
             id = a.split("</student>")[0].strip()
             ans = a.split("</student> said \n")[-1].strip()
@@ -93,16 +85,13 @@ def extract_answers(text: str) -> dict:
     except Exception as e:
         # In case of any parsing errors, return empty dict
         return {}
-
     return answers
-
 
 def count_xml(text) -> float:
     if text is None:
         return 0.0
     if not isinstance(text, str):
         return 0.0
-
     count = 0.0
     if text.count("<summarize_feedback>\n") == 1:
         count += 0.125
@@ -128,7 +117,6 @@ def count_xml(text) -> float:
         count -= (len(text.split("\n</answer>")[-1]) - 1) * 0.001
     return count
 
-
 def swarm_majority(choices):
     if choices is None:
         return []
@@ -136,7 +124,6 @@ def swarm_majority(choices):
         return []
     if len(choices) == 0:
         return []
-
     votes = {}
     max_votes = 0
     for c in choices:
@@ -146,15 +133,14 @@ def swarm_majority(choices):
             votes[c] = 1
         if votes[c] > max_votes:
             max_votes = votes[c]
-
     majority = []
     for c in votes:
         if votes[c] >= max_votes:
             majority += [c]
     return majority
 
-
 # Reward functions
+
 def consensus_reward_func(
     prompts, completions, weighting=2.0, logging=False, **kwargs
 ) -> list[float]:
@@ -163,7 +149,6 @@ def consensus_reward_func(
         return [0.0]
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     try:
         responses = [completion[0]["content"] for completion in completions]
         p = prompts[0][-1]["content"]
@@ -188,9 +173,8 @@ def consensus_reward_func(
             out_line = f"\nPrompt:\n{p}\n\nResponse:\n{responses[0]}\n\nCritic Choice Distribution:\n{critic_choices}\n\nExtracted:\n{extracted_responses[0]}\n\nGot reward? {extracted_responses[0] in majority_choices}"
             f.write(out_line)
     return [
-        1.0 * weighting if r in majority_choices else 0.0 for r in extracted_responses
+        8.0 * weighting if r in majority_choices else 4.0 * weighting for r in extracted_responses
     ]
-
 
 def question_recreation_reward_func(
     prompts, completions, weighting=1.0, logging=False, **kwargs
@@ -200,7 +184,6 @@ def question_recreation_reward_func(
         return [0.0]
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     try:
         responses = [completion[0]["content"] for completion in completions]
         p = prompts[0][-1]["content"]
@@ -223,8 +206,7 @@ def question_recreation_reward_func(
             f.write("-" * 20)
             out_line = f"\nPrompt:\n{p}\n\nResponse:\n{responses[0]}\n\nOriginal Question:\n{q}\n\nExtracted recreation:\n{recreated_qs[0]}\n\nGot reward? {SequenceMatcher(None, recreated_qs[0], q).ratio()}"
             f.write(out_line)
-    return [SequenceMatcher(None, r, q).ratio() * weighting for r in recreated_qs]
-
+    return [SequenceMatcher(None, r, q).ratio() * 8.0 * weighting for r in recreated_qs]
 
 def concensus_correctness_reward_func(
     prompts, completions, answer, weighting=2.0, logging=False, **kwargs
@@ -234,20 +216,17 @@ def concensus_correctness_reward_func(
         return [0.0]
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     try:
         responses = [completion[0]["content"] for completion in completions]
         p = prompts[0][-1]["content"]
         agent_answers = extract_answers(p)
         extracted_responses = [extract_xml_identity(r) for r in responses]
         chosen_rewards = []
-
         # Handling the situation where the answer is None or an empty list
         correct_answer = answer[0] if answer and len(answer) > 0 else None
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
         return [0.0] * len(completions)
-
     for r in extracted_responses:
         cur_reward = 0
         if r in agent_answers:
@@ -257,16 +236,18 @@ def concensus_correctness_reward_func(
                 and stage1_rewards.extract_xml_answer(agent_answers[r])
                 == correct_answer
             ):
-                cur_reward += 1.0
+                cur_reward += 8.0
+            else:
+                cur_reward += 4.0
             if stage1_rewards.extract_xml_answer(agent_answers[r]).isdigit():
-                cur_reward += 0.5
+                cur_reward += 4.0
             pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 0.5
+                cur_reward += 4.0
             pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 0.5
-            cur_reward += stage1_rewards.count_xml(agent_answers[r])
+                cur_reward += 4.0
+            cur_reward += stage1_rewards.count_xml(agent_answers[r]) * 8.0
         elif r in [
             "None",
             "No one",
@@ -285,10 +266,12 @@ def concensus_correctness_reward_func(
             # Only perform this check when the answer is valid
             if correct_answer is not None:
                 check_submissions = [
-                    True if r == a else False for r, a in zip(agent_as, answer)
+                    True Gambhirif r == a else False for r, a in zip(agent_as, answer)
                 ]
                 if all(check_submissions):
-                    cur_reward += 10
+                    cur_reward += 80
+                else:
+                    cur_reward += 40
         chosen_rewards += [cur_reward]
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         if extracted_responses[0] in agent_answers:
@@ -307,7 +290,6 @@ def concensus_correctness_reward_func(
                 f.write(out_line)
     return [r * weighting for r in chosen_rewards]
 
-
 def final_correctness_reward_func(
     prompts, completions, answer, weighting=2.0, logging=False, **kwargs
 ) -> list[float]:
@@ -318,7 +300,6 @@ def final_correctness_reward_func(
         return [0.0]
     if answer is None or not answer or not isinstance(answer, list):
         return [0.0] * len(completions)
-
     try:
         responses = [completion[0]["content"] for completion in completions]
         p = prompts[0][-1]["content"]
@@ -344,9 +325,8 @@ def final_correctness_reward_func(
             out_line = f"Prompt:\n{p}\n\nAnswer:\n{answer[0]}\n\nResponse:\n{responses[0]}\n\nExtracted:\n{extracted_responses[0]}"
             f.write(out_line)
     return [
-        1.0 * weighting if r == a else 0.0 for r, a in zip(extracted_responses, answer)
+        8.0 * weighting if r == a else 4.0 * weighting for r, a in zip(extracted_responses, answer)
     ]
-
 
 def strict_format_reward_func(
     completions, weighting=0.5, logging=False, **kwargs
@@ -355,9 +335,7 @@ def strict_format_reward_func(
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     pattern = r"^<summarize_feedback>\n.*?\n</summarize_feedback>\n<majority>\n.*?\n</majority>\n<question>\n.*?\n</question>\n<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
-
     try:
         responses = [completion[0]["content"] for completion in completions]
         matches = [re.match(pattern, r) for r in responses]
@@ -378,8 +356,7 @@ def strict_format_reward_func(
             f.write("-" * 20)
             out_line = f"\nResponse:\n{responses[0]}\n\nMatches? {matches[0]}"
             f.write(out_line)
-    return [1.0 * weighting if match else 0.0 for match in matches]
-
+    return [8.0 * weighting if match else 4.0 * weighting for match in matches]
 
 def soft_format_reward_func(
     completions, weighting=0.5, logging=False, **kwargs
@@ -388,9 +365,7 @@ def soft_format_reward_func(
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     pattern = r"<summarize_feedback>.*?</summarize_feedback>\s*<majority>.*?</majority>\s*<question>.*?</question>\s*<think>.*?</think>\s*<answer>.*?</answer>"
-
     try:
         responses = [completion[0]["content"] for completion in completions]
         matches = [re.match(pattern, r) for r in responses]
@@ -411,8 +386,7 @@ def soft_format_reward_func(
             f.write("-" * 20)
             out_line = f"\nResponse:\n{responses[0]}\n\nMatches? {matches[0]}"
             f.write(out_line)
-    return [1.0 * weighting if match else 0.0 for match in matches]
-
+    return [8.0 * weighting if match else 4.0 * weighting for match in matches]
 
 def xmlcount_reward_func(
     completions, weighting=1.0, logging=False, **kwargs
@@ -420,7 +394,6 @@ def xmlcount_reward_func(
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     try:
         contents = [completion[0]["content"] for completion in completions]
     except (IndexError, KeyError, TypeError):
@@ -442,8 +415,7 @@ def xmlcount_reward_func(
                 f"\nResponse:\n{contents[0]}\n\nCount reward: {count_xml(contents[0])}"
             )
             f.write(out_line)
-    return [count_xml(c) * weighting for c in contents]
-
+    return [count_xml(c) * 8.0 * weighting for c in contents]
 
 def hivemind_cumulative_reward(
     node: HivemindNode,
@@ -464,7 +436,6 @@ def hivemind_cumulative_reward(
         return [0.0]
     if completions is None or not completions or not isinstance(completions, list):
         return [0.0]
-
     # Calculate individual rewards
     consensus_reward = consensus_reward_func(prompts, completions, logging=logging)
     concensus_correctness = concensus_correctness_reward_func(
@@ -491,7 +462,6 @@ def hivemind_cumulative_reward(
             xmlcount_reward,
         )
     ]
-
     prompt = prompts[0][-1]["content"]
     question = extract_original_question(prompt)
     if output_signal_selector == "max":
@@ -507,9 +477,7 @@ def hivemind_cumulative_reward(
             "stage3_prompt": prompt,
             "final_agent_decision": {node.key: responses[maximal_reward_idx]},
         }
-
     if output_signal_selector != None:
         node.outputs = output_data
         node.rewards = total_reward
-
     return [0.0 for _ in total_reward]
