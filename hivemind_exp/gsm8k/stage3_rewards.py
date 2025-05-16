@@ -173,7 +173,7 @@ def consensus_reward_func(
             out_line = f"\nPrompt:\n{p}\n\nResponse:\n{responses[0]}\n\nCritic Choice Distribution:\n{critic_choices}\n\nExtracted:\n{extracted_responses[0]}\n\nGot reward? {extracted_responses[0] in majority_choices}"
             f.write(out_line)
     return [
-        8.0 * weighting if r in majority_choices else 4.0 * weighting for r in extracted_responses
+        8.0 * weighting if r in majority_choices else 2.0 * weighting for r in extracted_responses
     ]
 
 def question_recreation_reward_func(
@@ -236,18 +236,18 @@ def concensus_correctness_reward_func(
                 and stage1_rewards.extract_xml_answer(agent_answers[r])
                 == correct_answer
             ):
-                cur_reward += 8.0
+                cur_reward += 2.0
             else:
-                cur_reward += 4.0
+                cur_reward += 2.0
             if stage1_rewards.extract_xml_answer(agent_answers[r]).isdigit():
-                cur_reward += 4.0
+                cur_reward += 2.0
             pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 4.0
+                cur_reward += 2.0
             pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 4.0
-            cur_reward += stage1_rewards.count_xml(agent_answers[r]) * 8.0
+                cur_reward += 2.0
+            cur_reward += stage1_rewards.count_xml(agent_answers[r]) * 2.0
         elif r in [
             "None",
             "No one",
@@ -269,9 +269,9 @@ def concensus_correctness_reward_func(
                     True if r == a else False for r, a in zip(agent_as, answer)
                 ]
                 if all(check_submissions):
-                    cur_reward += 80
+                    cur_reward += 10
                 else:
-                    cur_reward += 40
+                    cur_reward += 10
         chosen_rewards += [cur_reward]
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         if extracted_responses[0] in agent_answers:
@@ -325,7 +325,7 @@ def final_correctness_reward_func(
             out_line = f"Prompt:\n{p}\n\nAnswer:\n{answer[0]}\n\nResponse:\n{responses[0]}\n\nExtracted:\n{extracted_responses[0]}"
             f.write(out_line)
     return [
-        8.0 * weighting if r == a else 4.0 * weighting for r, a in zip(extracted_responses, answer)
+        8.0 * weighting if r == a else 2.0 * weighting for r, a in zip(extracted_responses, answer)
     ]
 
 def strict_format_reward_func(
@@ -356,7 +356,7 @@ def strict_format_reward_func(
             f.write("-" * 20)
             out_line = f"\nResponse:\n{responses[0]}\n\nMatches? {matches[0]}"
             f.write(out_line)
-    return [8.0 * weighting if match else 4.0 * weighting for match in matches]
+    return [8.0 * weighting if match else 2.0 * weighting for match in matches]
 
 def soft_format_reward_func(
     completions, weighting=0.5, logging=False, **kwargs
@@ -386,7 +386,7 @@ def soft_format_reward_func(
             f.write("-" * 20)
             out_line = f"\nResponse:\n{responses[0]}\n\nMatches? {matches[0]}"
             f.write(out_line)
-    return [8.0 * weighting if match else 4.0 * weighting for match in matches]
+    return [2.0 * weighting if match else 2.0 * weighting for match in matches]
 
 def xmlcount_reward_func(
     completions, weighting=1.0, logging=False, **kwargs
@@ -415,7 +415,7 @@ def xmlcount_reward_func(
                 f"\nResponse:\n{contents[0]}\n\nCount reward: {count_xml(contents[0])}"
             )
             f.write(out_line)
-    return [count_xml(c) * 8.0 * weighting for c in contents]
+    return [count_xml(c) * 2.0 * weighting for c in contents]
 
 def hivemind_cumulative_reward(
     node: HivemindNode,
