@@ -78,13 +78,13 @@ def count_xml(text) -> float:
 # Reward functions
 
 def proper_id_reward_func(
-    prompts, completions, answer, weighting=6.0, logging=True, **kwargs
+    prompts, completions, answer, weighting=2.0, logging=True, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
-        return [3.0]
+        return [1.0]
     if completions is None or not completions or not isinstance(completions, list):
-        return [3.0]
+        return [1.0]
 
     try:
         responses = [completion[0]["content"] for completion in completions]
@@ -93,18 +93,18 @@ def proper_id_reward_func(
         extracted_responses = [extract_xml_identity(r) for r in responses]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [3.0] * len(completions)
+        return [1.0] * len(completions)
     
-    return [6.0 * weighting if r in agent_ids else 0.0 for r in extracted_responses]
+    return [2.0 * weighting if r in agent_ids else 1.0 for r in extracted_responses]
 
 def correctness_reward_func(
-    prompts, completions, answer, weighting=6.0, logging=True, **kwargs
+    prompts, completions, answer, weighting=2.0, logging=True, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
-        return [3.0]
+        return [1.0]
     if completions is None or not completions or not isinstance(completions, list):
-        return [3.0]
+        return [1.0]
 
     try:
         responses = [completion[0]["content"] for completion in completions]
@@ -113,22 +113,22 @@ def correctness_reward_func(
         extracted_responses = [extract_xml_identity(r) for r in responses]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [3.0] * len(completions)
+        return [1.0] * len(completions)
     
     chosen_rewards = []
     for r in extracted_responses:
-        cur_reward = 6
+        cur_reward = 2
         if r in agent_answers:
             if stage1_rewards.extract_xml_answer(agent_answers[r]) == answer[0]:
-                cur_reward += 6.0  # Increased reward for correct answer
+                cur_reward += 2.0  # Increased reward for correct answer
             if stage1_rewards.extract_xml_answer(agent_answers[r]).isdigit():
-                cur_reward += 3.0  # Increased reward for digit-based answer
+                cur_reward += 1.0  # Increased reward for digit-based answer
             pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 3.0
+                cur_reward += 1.0
             pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 3.0
+                cur_reward += 1.0
             cur_reward += stage1_rewards.count_xml(agent_answers[r])
         elif r in [
             "None",
@@ -149,17 +149,17 @@ def correctness_reward_func(
                 True if r == a else False for r, a in zip(agent_as, answer)
             ]
             if all(check_submissions):
-                cur_reward += 3.0  # Adjusted to 3x reward for wrong answers
+                cur_reward += 1.0  # Adjusted to 3x reward for wrong answers
         chosen_rewards += [cur_reward]
     return [r * weighting for r in chosen_rewards]
 
 def strict_format_reward_func(
-    completions, weighting=6, logging=True, **kwargs
+    completions, weighting=2, logging=True, **kwargs
 ) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
-        return [3.0]
+        return [1.0]
 
     pattern = r"^<compare>\n.*?\n</compare>\n<explain>\n.*?\n</explain>\n<identify>\n.*?\n</identify>\n$"
 
@@ -168,17 +168,17 @@ def strict_format_reward_func(
         matches = [re.match(pattern, r) for r in responses]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [3.0] * len(completions)
+        return [1.0] * len(completions)
     
-    return [6.0 * weighting if match else 3.0 for match in matches]
+    return [2.0 * weighting if match else 1.0 for match in matches]
 
 def soft_format_reward_func(
-    completions, weighting=6.0, logging=True, **kwargs
+    completions, weighting=2.0, logging=True, **kwargs
 ) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
-        return [3.0]
+        return [1.0]
 
     pattern = (
         r"<compare>.*?</compare>\s*<explain>.*?</explain>\s*<identify>.*?</identify>"
@@ -189,22 +189,22 @@ def soft_format_reward_func(
         matches = [re.match(pattern, r) for r in responses]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [3.0] * len(completions)
+        return [1.0] * len(completions)
     
-    return [6.0 * weighting if match else 3.0 for match in matches]
+    return [2.0 * weighting if match else 1.0 for match in matches]
 
 def xmlcount_reward_func(
-    completions, weighting=6.0, logging=True, **kwargs
+    completions, weighting=2.0, logging=True, **kwargs
 ) -> list[float]:
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
-        return [3.0]
+        return [1.0]
 
     try:
         contents = [completion[0]["content"] for completion in completions]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [3.0] * len(completions)
+        return [1.0] * len(completions)
     
     return [count_xml(c) * weighting for c in contents]
 
@@ -253,11 +253,11 @@ def hivemind_cumulative_reward(
     """
     # Validate inputs
     if node is None:
-        return [3.0]
+        return [1.0]
     if prompts is None or not prompts or not isinstance(prompts, list):
-        return [3.0]
+        return [1.0]
     if completions is None or not completions or not isinstance(completions, list):
-        return [3.0]
+        return [1.0]
 
     # Calculate individual rewards
     proper_id_reward = proper_id_reward_func(
@@ -298,4 +298,4 @@ def hivemind_cumulative_reward(
         node.outputs = output_data
         node.rewards = total_reward
 
-    return [6.0 for _ in total_reward]
+    return [2.0 for _ in total_reward]
