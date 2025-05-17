@@ -269,9 +269,9 @@ def concensus_correctness_reward_func(
                     True if r == a else False for r, a in zip(agent_as, answer)
                 ]
                 if all(check_submissions):
-                    cur_reward += 10
+                    cur_reward += 5
                 else:
-                    cur_reward += 10
+                    cur_reward += 5
         chosen_rewards += [cur_reward]
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         if extracted_responses[0] in agent_answers:
