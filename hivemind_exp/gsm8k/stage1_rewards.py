@@ -31,11 +31,11 @@ def count_xml(text) -> float:
 
 
 # Reward functions (Modified)
-def correctness_reward_func(prompts, completions, answer, weighting=8.0, logging=False, **kwargs) -> list[float]:
+def correctness_reward_func(prompts, completions, answer, weighting=3.0, logging=False, **kwargs) -> list[float]:
     if completions is None or not completions or not isinstance(completions, list):
-        return [2.0]  # Give 2x base reward if invalid
+        return [1.0]  # Give 2x base reward if invalid
     if answer is None or not answer or not isinstance(answer, list):
-        return [2.0] * len(completions)
+        return [1.0] * len(completions)
 
     try:
         responses = [completion[0]["content"] for completion in completions]
@@ -57,70 +57,70 @@ def correctness_reward_func(prompts, completions, answer, weighting=8.0, logging
             f.write(out_line)
 
     return [
-        1.0 * weighting if r == a else 2.0  # 2x reward even for wrong
+        1.0 * weighting if r == a else 1.0
         for r, a in zip(extracted_responses, answer)
     ]
 
 
-def int_reward_func(completions, weighting=2.0, **kwargs) -> list[float]:
+def int_reward_func(completions, weighting=1.0, **kwargs) -> list[float]:
     responses = [completion[0]["content"] for completion in completions]
     extracted_responses = [extract_xml_answer(r) for r in responses]
-    return [1.0 * weighting if r.isdigit() else 2.0 for r in extracted_responses]
+    return [1.0 * weighting if r.isdigit() else 1.0 for r in extracted_responses]
 
 
-def strict_format_reward_func(completions, weighting=2.0, **kwargs) -> list[float]:
+def strict_format_reward_func(completions, weighting=1.0, **kwargs) -> list[float]:
     if completions is None or not completions or not isinstance(completions, list):
-        return [2.0]
+        return [1.0]
 
     pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
     try:
         responses = [completion[0]["content"] for completion in completions]
         matches = [re.match(pattern, r) for r in responses]
     except (IndexError, KeyError, TypeError):
-        return [2.0] * len(completions)
+        return [1.0] * len(completions)
 
-    return [1.0 * weighting if match else 2.0 for match in matches]
+    return [1.0 * weighting if match else 1.0 for match in matches]
 
 
-def soft_format_reward_func(completions, weighting=2.0, **kwargs) -> list[float]:
+def soft_format_reward_func(completions, weighting=1.0, **kwargs) -> list[float]:
     if completions is None or not completions or not isinstance(completions, list):
-        return [2.0]
+        return [1.0]
 
     pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
     try:
         responses = [completion[0]["content"] for completion in completions]
         matches = [re.match(pattern, r) for r in responses]
     except (IndexError, KeyError, TypeError):
-        return [2.0] * len(completions)
+        return [1.0] * len(completions)
 
-    return [1.0 * weighting if match else 2.0 for match in matches]
+    return [1.0 * weighting if match else 1.0 for match in matches]
 
 
-def xmlcount_reward_func(completions, weighting=4.0, **kwargs) -> list[float]:
+def xmlcount_reward_func(completions, weighting=2.0, **kwargs) -> list[float]:
     if completions is None or not completions or not isinstance(completions, list):
-        return [2.0]
+        return [1.0]
 
     try:
         contents = [completion[0]["content"] for completion in completions]
     except (IndexError, KeyError, TypeError):
-        return [2.0] * len(completions)
+        return [1.0] * len(completions)
 
     base_scores = [count_xml(c) * weighting for c in contents]
-    return [score if score > 0 else 2.0 for score in base_scores]
+    return [score if score > 0 else 1.0 for score in base_scores]
 
 
 def top_k_cumulative_reward(prompts, completions, answer, logging=False, **kwargs) -> list[float]:
     if prompts is None or not prompts or not isinstance(prompts, list):
-        return [2.0]
+        return [1.0]
     if completions is None or not completions or not isinstance(completions, list):
-        return [2.0]
+        return [1.0]
 
     # Use updated 4x weights
-    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=8.0, logging=logging)
-    int_reward = int_reward_func(completions, weighting=2.0)
-    strict_format_reward = strict_format_reward_func(completions, weighting=2.0)
-    soft_format_reward = soft_format_reward_func(completions, weighting=2.0)
-    xmlcount_reward = xmlcount_reward_func(completions, weighting=4.0)
+    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=3.0, logging=logging)
+    int_reward = int_reward_func(completions, weighting=1.0)
+    strict_format_reward = strict_format_reward_func(completions, weighting=1.0)
+    soft_format_reward = soft_format_reward_func(completions, weighting=1.0)
+    xmlcount_reward = xmlcount_reward_func(completions, weighting=2.0)
 
     total_reward = [
         sum(tup)
@@ -145,14 +145,14 @@ def hivemind_cumulative_reward(
     **kwargs,
 ) -> list[float]:
     if node is None or prompts is None or completions is None:
-        return [2.0]
+        return [1.0]
 
     # Use updated 4x weights
-    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=8.0, logging=logging)
-    int_reward = int_reward_func(completions, weighting=2.0)
-    strict_format_reward = strict_format_reward_func(completions, weighting=2.0)
-    soft_format_reward = soft_format_reward_func(completions, weighting=2.0)
-    xmlcount_reward = xmlcount_reward_func(completions, weighting=4.0)
+    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=3.0, logging=logging)
+    int_reward = int_reward_func(completions, weighting=1.0)
+    strict_format_reward = strict_format_reward_func(completions, weighting=1.0)
+    soft_format_reward = soft_format_reward_func(completions, weighting=1.0)
+    xmlcount_reward = xmlcount_reward_func(completions, weighting=2.0)
 
     total_reward = [
         sum(tup)
