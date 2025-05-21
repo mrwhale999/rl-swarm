@@ -31,7 +31,7 @@ def count_xml(text) -> float:
 
 
 # Reward functions (Modified)
-def correctness_reward_func(prompts, completions, answer, weighting=3.0, logging=False, **kwargs) -> list[float]:
+def correctness_reward_func(prompts, completions, answer, weighting=1.0, logging=False, **kwargs) -> list[float]:
     if completions is None or not completions or not isinstance(completions, list):
         return [1.0]  # Give 2x base reward if invalid
     if answer is None or not answer or not isinstance(answer, list):
@@ -42,7 +42,7 @@ def correctness_reward_func(prompts, completions, answer, weighting=3.0, logging
         q = prompts[0][-1]["content"]
         extracted_responses = [extract_xml_answer(r) for r in responses]
     except (IndexError, KeyError, TypeError):
-        return [2.0] * len(completions)
+        return [1.0] * len(completions)
 
     if (random.random() < 0.01) and logging:
         os.makedirs(f"model_output_samples/gsm8k_samples_from_{os.getenv('HOSTNAME')}", exist_ok=True)
@@ -96,7 +96,7 @@ def soft_format_reward_func(completions, weighting=1.0, **kwargs) -> list[float]
     return [1.0 * weighting if match else 1.0 for match in matches]
 
 
-def xmlcount_reward_func(completions, weighting=2.0, **kwargs) -> list[float]:
+def xmlcount_reward_func(completions, weighting=1.0, **kwargs) -> list[float]:
     if completions is None or not completions or not isinstance(completions, list):
         return [1.0]
 
@@ -116,11 +116,11 @@ def top_k_cumulative_reward(prompts, completions, answer, logging=False, **kwarg
         return [1.0]
 
     # Use updated 4x weights
-    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=3.0, logging=logging)
+    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=1.0, logging=logging)
     int_reward = int_reward_func(completions, weighting=1.0)
     strict_format_reward = strict_format_reward_func(completions, weighting=1.0)
     soft_format_reward = soft_format_reward_func(completions, weighting=1.0)
-    xmlcount_reward = xmlcount_reward_func(completions, weighting=2.0)
+    xmlcount_reward = xmlcount_reward_func(completions, weighting=1.0)
 
     total_reward = [
         sum(tup)
@@ -148,11 +148,11 @@ def hivemind_cumulative_reward(
         return [1.0]
 
     # Use updated 4x weights
-    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=3.0, logging=logging)
+    correctness_reward = correctness_reward_func(prompts, completions, answer, weighting=1.0, logging=logging)
     int_reward = int_reward_func(completions, weighting=1.0)
     strict_format_reward = strict_format_reward_func(completions, weighting=1.0)
     soft_format_reward = soft_format_reward_func(completions, weighting=1.0)
-    xmlcount_reward = xmlcount_reward_func(completions, weighting=2.0)
+    xmlcount_reward = xmlcount_reward_func(completions, weighting=1.0)
 
     total_reward = [
         sum(tup)
