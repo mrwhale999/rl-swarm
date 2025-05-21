@@ -142,7 +142,7 @@ def swarm_majority(choices):
 # Reward functions
 
 def consensus_reward_func(
-    prompts, completions, weighting=2.0, logging=False, **kwargs
+    prompts, completions, weighting=1.0, logging=False, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
@@ -209,7 +209,7 @@ def question_recreation_reward_func(
     return [SequenceMatcher(None, r, q).ratio() * 8.0 * weighting for r in recreated_qs]
 
 def concensus_correctness_reward_func(
-    prompts, completions, answer, weighting=2.0, logging=False, **kwargs
+    prompts, completions, answer, weighting=1.0, logging=False, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
@@ -236,18 +236,18 @@ def concensus_correctness_reward_func(
                 and stage1_rewards.extract_xml_answer(agent_answers[r])
                 == correct_answer
             ):
-                cur_reward += 2.0
+                cur_reward += 1.0
             else:
-                cur_reward += 2.0
+                cur_reward += 1.0
             if stage1_rewards.extract_xml_answer(agent_answers[r]).isdigit():
-                cur_reward += 2.0
+                cur_reward += 1.0
             pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 2.0
+                cur_reward += 1.0
             pattern = r"<think>.*?</think>\s*<answer>.*?</answer>"
             if re.match(pattern, agent_answers[r]):
-                cur_reward += 2.0
-            cur_reward += stage1_rewards.count_xml(agent_answers[r]) * 2.0
+                cur_reward += 1.0
+            cur_reward += stage1_rewards.count_xml(agent_answers[r]) * 1.0
         elif r in [
             "None",
             "No one",
@@ -269,9 +269,9 @@ def concensus_correctness_reward_func(
                     True if r == a else False for r, a in zip(agent_as, answer)
                 ]
                 if all(check_submissions):
-                    cur_reward += 5
+                    cur_reward += 2
                 else:
-                    cur_reward += 5
+                    cur_reward += 2
         chosen_rewards += [cur_reward]
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         if extracted_responses[0] in agent_answers:
@@ -291,7 +291,7 @@ def concensus_correctness_reward_func(
     return [r * weighting for r in chosen_rewards]
 
 def final_correctness_reward_func(
-    prompts, completions, answer, weighting=2.0, logging=False, **kwargs
+    prompts, completions, answer, weighting=1.0, logging=False, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
@@ -325,11 +325,11 @@ def final_correctness_reward_func(
             out_line = f"Prompt:\n{p}\n\nAnswer:\n{answer[0]}\n\nResponse:\n{responses[0]}\n\nExtracted:\n{extracted_responses[0]}"
             f.write(out_line)
     return [
-        8.0 * weighting if r == a else 2.0 * weighting for r, a in zip(extracted_responses, answer)
+        2.0 * weighting if r == a else 1.0 * weighting for r, a in zip(extracted_responses, answer)
     ]
 
 def strict_format_reward_func(
-    completions, weighting=0.5, logging=False, **kwargs
+    completions, weighting=1, logging=False, **kwargs
 ) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     # Validate inputs
@@ -356,22 +356,22 @@ def strict_format_reward_func(
             f.write("-" * 20)
             out_line = f"\nResponse:\n{responses[0]}\n\nMatches? {matches[0]}"
             f.write(out_line)
-    return [8.0 * weighting if match else 2.0 * weighting for match in matches]
+    return [2.0 * weighting if match else 1.0 * weighting for match in matches]
 
 def soft_format_reward_func(
-    completions, weighting=0.5, logging=False, **kwargs
+    completions, weighting=1, logging=False, **kwargs
 ) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
-        return [0.0]
+        return [1.0]
     pattern = r"<summarize_feedback>.*?</summarize_feedback>\s*<majority>.*?</majority>\s*<question>.*?</question>\s*<think>.*?</think>\s*<answer>.*?</answer>"
     try:
         responses = [completion[0]["content"] for completion in completions]
         matches = [re.match(pattern, r) for r in responses]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [0.0] * len(completions)
+        return [1.0] * len(completions)
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         os.makedirs(
             f"model_output_samples/multi_stage_gsm8k_samples_from_{os.getenv('HOSTNAME')}",
@@ -386,19 +386,19 @@ def soft_format_reward_func(
             f.write("-" * 20)
             out_line = f"\nResponse:\n{responses[0]}\n\nMatches? {matches[0]}"
             f.write(out_line)
-    return [2.0 * weighting if match else 2.0 * weighting for match in matches]
+    return [2.0 * weighting if match else 1.0 * weighting for match in matches]
 
 def xmlcount_reward_func(
     completions, weighting=1.0, logging=False, **kwargs
 ) -> list[float]:
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
-        return [0.0]
+        return [1.0]
     try:
         contents = [completion[0]["content"] for completion in completions]
     except (IndexError, KeyError, TypeError):
         # Return default rewards if we can't extract the necessary data
-        return [0.0] * len(completions)
+        return [1.0] * len(completions)
     if (random.random() < 0.01) and logging:  # 1% chance to write samples into a file
         os.makedirs(
             f"model_output_samples/multi_stage_gsm8k_samples_from_{os.getenv('HOSTNAME')}",
@@ -415,7 +415,7 @@ def xmlcount_reward_func(
                 f"\nResponse:\n{contents[0]}\n\nCount reward: {count_xml(contents[0])}"
             )
             f.write(out_line)
-    return [count_xml(c) * 2.0 * weighting for c in contents]
+    return [count_xml(c) * 1.0 * weighting for c in contents]
 
 def hivemind_cumulative_reward(
     node: HivemindNode,
