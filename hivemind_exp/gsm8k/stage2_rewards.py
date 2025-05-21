@@ -78,7 +78,7 @@ def count_xml(text) -> float:
 # Reward functions
 
 def proper_id_reward_func(
-    prompts, completions, answer, weighting=2.0, logging=True, **kwargs
+    prompts, completions, answer, weighting=1.0, logging=True, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
@@ -98,7 +98,7 @@ def proper_id_reward_func(
     return [2.0 * weighting if r in agent_ids else 1.0 for r in extracted_responses]
 
 def correctness_reward_func(
-    prompts, completions, answer, weighting=2.0, logging=True, **kwargs
+    prompts, completions, answer, weighting=1.0, logging=True, **kwargs
 ) -> list[float]:
     # Validate inputs
     if prompts is None or not prompts or not isinstance(prompts, list):
@@ -117,10 +117,10 @@ def correctness_reward_func(
     
     chosen_rewards = []
     for r in extracted_responses:
-        cur_reward = 2
+        cur_reward = 1
         if r in agent_answers:
             if stage1_rewards.extract_xml_answer(agent_answers[r]) == answer[0]:
-                cur_reward += 2.0  # Increased reward for correct answer
+                cur_reward += 1.0  # Increased reward for correct answer
             if stage1_rewards.extract_xml_answer(agent_answers[r]).isdigit():
                 cur_reward += 1.0  # Increased reward for digit-based answer
             pattern = r"^<think>\n.*?\n</think>\n<answer>\n.*?\n</answer>\n$"
@@ -154,7 +154,7 @@ def correctness_reward_func(
     return [r * weighting for r in chosen_rewards]
 
 def strict_format_reward_func(
-    completions, weighting=2, logging=True, **kwargs
+    completions, weighting=1, logging=True, **kwargs
 ) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     # Validate inputs
@@ -170,10 +170,10 @@ def strict_format_reward_func(
         # Return default rewards if we can't extract the necessary data
         return [1.0] * len(completions)
     
-    return [2.0 * weighting if match else 1.0 for match in matches]
+    return [1.0 * weighting if match else 1.0 for match in matches]
 
 def soft_format_reward_func(
-    completions, weighting=2.0, logging=True, **kwargs
+    completions, weighting=1.0, logging=True, **kwargs
 ) -> list[float]:
     """Reward function that checks if the completion has a specific format."""
     # Validate inputs
@@ -191,10 +191,10 @@ def soft_format_reward_func(
         # Return default rewards if we can't extract the necessary data
         return [1.0] * len(completions)
     
-    return [2.0 * weighting if match else 1.0 for match in matches]
+    return [1.0 * weighting if match else 1.0 for match in matches]
 
 def xmlcount_reward_func(
-    completions, weighting=2.0, logging=True, **kwargs
+    completions, weighting=1.0, logging=True, **kwargs
 ) -> list[float]:
     # Validate inputs
     if completions is None or not completions or not isinstance(completions, list):
@@ -298,4 +298,4 @@ def hivemind_cumulative_reward(
         node.outputs = output_data
         node.rewards = total_reward
 
-    return [2.0 for _ in total_reward]
+    return [1.0 for _ in total_reward]
